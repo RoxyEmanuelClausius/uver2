@@ -1,0 +1,45 @@
+const { CommandInteraction, Client } = require('discord.js');
+const welcome = require("../../database/schemas/welcome");
+
+module.exports = {
+    name: "welcome",
+    description: "welcome system",
+    options: [
+        {
+            name: "channel",
+            description: "welcome channel",
+            type: 7,
+            required: true,
+            channel_types:[0],
+        },
+        {
+            name: "message",
+            description:
+                "welcome message, keys: {mention} {user} {server} {member}",
+            type: 3,
+            required: true,
+        },
+    ],
+
+    /** 
+     * @param {Client} client
+     * @param {CommandInteraction} interaction
+     */
+    
+    run: async (client, interaction) => {
+        const data =
+                (await welcome.findOne({guildid: interaction.guild.id})) ||
+                (await welcome.create({guildid: interaction.guild.id})),
+            channel = interaction.options.getChannel("channel"),
+            message = interaction.options.getString("message");
+
+            data.channel = channel.id;
+            data.message = message;
+            await data.save();
+
+            interaction.reply({
+                content: "berhasil",
+            });
+    },
+};
+

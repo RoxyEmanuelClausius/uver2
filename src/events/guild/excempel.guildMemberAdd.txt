@@ -1,0 +1,109 @@
+const { AttachmentBuilder } = require('discord.js');
+const { createCanvas, loadImage } = require("@napi-rs/canvas");
+const welcome = require ("../../database/schemas/welcome");
+
+module.exports = async (client, member) => {
+
+    //welcome system
+  const data = await welcome.findOne({guildid: member.guild.id});
+  if (!data) return;
+
+  let canvas = createCanvas(1024, 576);
+  let ctx = canvas.getContext("2d");
+
+  //img
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0,0, canvas.width, canvas.height);
+  let img = await loadImage("https://cdn.discordapp.com/attachments/1046840055295127723/1119643644169826494/Welcome_uverseni.png");
+  ctx.drawImage(
+    img,
+    canvas.width / 2 - img.width / 2,
+    canvas.height / 2 - img.height / 2 
+  );
+
+  //layer
+  ctx.fillStyle = "#000000";
+  ctx.globalAlpha = 0.5;
+  ctx.fillRect(0, 0, 25, canvas.height);
+  ctx.fillRect(canvas.width - 25, 0, 25, canvas.height);
+  ctx.fillRect(25, 0, canvas.width - 50, 25);
+  ctx.fillRect(25, canvas.height - 25, canvas.width - 50, 25);
+  ctx.globalAlpha = 1;
+
+  //title
+  const welc = "WELCOME";
+  ctx.font = "bold 90px sans";
+  ctx.strokeStyle = "#000000";
+  ctx.lineWidth = 12;
+  ctx.strokeText(welc, 400, 200);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillText(welc, 400, 200);
+
+  //username
+  ctx.font = "bold 65px sans";
+  ctx.strokeStyle = "#000000";
+  ctx.lineWidth = 10;
+  ctx.strokeText(member.user.username.slice(0,25),400, 200);
+  ctx.fillStyle = "#eb6123";
+  ctx.fillText(member.user.username.slice(0,25), 400, 200);
+
+  //discriminator
+  ctx.font = "bold 45px sans";
+  ctx.strokeStyle = "#000000";
+  ctx.lineWidth = 10;
+  ctx.strokeText(
+    `#${member.user.discriminator}`,
+    canvas.width - 620,
+    canvas.height - 120
+  );
+  ctx.fillStyle = "#eb6123";
+  ctx.fillText(
+    `#${member.user.discriminator}`,
+    canvas.width - 620,
+    canvas.height - 120
+  );
+
+  //member count
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 30px sans";
+  ctx.fillText(
+    `${member.guild.memberCount}th member`,
+    40,
+    canvas.height - 35
+  );
+
+  //avatar
+  ctx.beginPath();
+  ctx.lineWidth = 10;
+  ctx.strokeStyle = "#e96423";
+  ctx.arc(582, 248, 74, 0, Math.PI * 2, true);
+  ctx.stroke();
+  ctx.closePath();
+  ctx.clip();
+  img = await loadImage(member.displayAvatarURL({format:"png"}));
+  ctx.drawImage(img, 508, 174, 148, 148);
+  ctx.restore();
+
+  //sending the welcome card
+   member.guild.channels.cache.get(data.channel).send({
+     content: data.message
+       .replace(/\{mention\}/g, member.user.toString())
+       .replace(/\{user\}/g, member.user.username)
+       .replace(/\{server\}/g, member.user.name)
+       .replace(/\{members\}/g, member.user.memberCount),
+     files: [
+       new AttachmentBuilder(await canvas.encode("png"),{
+         name: "welcome.png",
+       }),
+     ],
+   });
+
+
+    // const data = await roleSchema.findOne({ Guild: member.guild.id })
+    // if (data) {
+    //     const role = member.guild.roles.cache.get(data.Role);
+    //     if (!role) return;
+
+    //     member.roles.add(role).catch(() => { });
+    // }
+};
